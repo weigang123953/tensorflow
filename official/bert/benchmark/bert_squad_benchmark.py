@@ -32,6 +32,7 @@ from official.bert import run_squad
 from official.bert.benchmark import benchmark_utils
 from official.bert.benchmark import squad_evaluate_v1_1
 from official.utils.misc import distribution_utils
+from official.utils.misc import keras_utils
 
 # pylint: disable=line-too-long
 PRETRAINED_CHECKPOINT_PATH = 'gs://cloud-tpu-checkpoints/bert/tf_20/uncased_L-24_H-1024_A-16/bert_model.ckpt'
@@ -86,10 +87,13 @@ class BertSquadBenchmarkBase(benchmark_utils.BertBenchmarkBase):
     strategy = distribution_utils.get_distribution_strategy(
         distribution_strategy='mirrored', num_gpus=self.num_gpus)
 
+    profiler_callback = keras_utils.get_profiler_callback(
+        FLAGS.model_dir, '5,7', False)
+
     run_squad.train_squad(
         strategy=strategy,
         input_meta_data=input_meta_data,
-        custom_callbacks=[self.timer_callback])
+        custom_callbacks=[self.timer_callback, profiler_callback])
     run_squad.predict_squad(strategy=strategy, input_meta_data=input_meta_data)
     predictions_file = os.path.join(FLAGS.model_dir, 'predictions.json')
     eval_metrics = self._evaluate_squad(predictions_file)

@@ -33,6 +33,7 @@ from official.bert import modeling
 from official.bert import run_classifier
 from official.bert.benchmark import benchmark_utils
 from official.utils.misc import distribution_utils
+from official.utils.misc import keras_utils
 
 # pylint: disable=line-too-long
 PRETRAINED_CHECKPOINT_PATH = 'gs://cloud-tpu-checkpoints/bert/tf_20/uncased_L-24_H-1024_A-16/bert_model.ckpt'
@@ -72,6 +73,13 @@ class BertClassifyBenchmarkBase(benchmark_utils.BertBenchmarkBase):
         math.ceil(input_meta_data['eval_data_size'] / FLAGS.eval_batch_size))
     strategy = distribution_utils.get_distribution_strategy(
         distribution_strategy='mirrored', num_gpus=self.num_gpus)
+
+    profiler_callback = keras_utils.get_profiler_callback(
+        FLAGS.model_dir, '5,7', False)
+    if not callbacks:
+      callbacks = [profiler_callback]
+    else:
+      callbacks.append(profiler_callback)
 
     run_classifier.run_customized_training(
         strategy,
